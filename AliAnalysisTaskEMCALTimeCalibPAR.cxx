@@ -52,10 +52,10 @@
 #include "AliOADBContainer.h"
 #include "AliDataFile.h"
 
-#include "AliAnalysisTaskEMCALTimeCalib.h"
+#include "AliAnalysisTaskEMCALTimeCalibPAR.h"
 
 /// \cond CLASSIMP
-ClassImp(AliAnalysisTaskEMCALTimeCalib) ;
+ClassImp(AliAnalysisTaskEMCALTimeCalibPAR) ;
 /// \endcond
 
 //using std::cout;
@@ -63,7 +63,7 @@ ClassImp(AliAnalysisTaskEMCALTimeCalib) ;
 
 //________________________________________________________________________
 /// Constructor
-AliAnalysisTaskEMCALTimeCalib::AliAnalysisTaskEMCALTimeCalib(const char *name)
+AliAnalysisTaskEMCALTimeCalibPAR::AliAnalysisTaskEMCALTimeCalibPAR(const char *name)
 : AliAnalysisTaskSE(name),
   fRunNumber(-1),
   //  fTOFmaker(0),
@@ -196,14 +196,14 @@ AliAnalysisTaskEMCALTimeCalib::AliAnalysisTaskEMCALTimeCalib(const char *name)
 /// Look the proper source to have more information
 /// Modified July 2, 2010 - HKD to take into account
 /// the changes in ALiTOFT0maker
-//void AliAnalysisTaskEMCALTimeCalib::LocalInit()
+//void AliAnalysisTaskEMCALTimeCalibPAR::LocalInit()
 //{
-//  AliDebug(1,"AliAnalysisTaskEMCALTimeCalib::LocalInit()");
+//  AliDebug(1,"AliAnalysisTaskEMCALTimeCalibPAR::LocalInit()");
 //}
 
 /// Load reference Histograms (for one period) from file
 //_____________________________________________________________________
-void AliAnalysisTaskEMCALTimeCalib::LoadReferenceHistos()
+void AliAnalysisTaskEMCALTimeCalibPAR::LoadReferenceHistos()
 {
   if(fReferenceFileName.Length()!=0){
     TFile *myFile = TFile::Open(fReferenceFileName.Data());
@@ -232,12 +232,12 @@ void AliAnalysisTaskEMCALTimeCalib::LoadReferenceHistos()
   } else { //end of reference file is provided
     AliFatal("You require to load reference histos from file but FILENAME is not provided");
   }
-} // End of AliAnalysisTaskEMCALTimeCalib::LoadReferenceHistos()
+} // End of AliAnalysisTaskEMCALTimeCalibPAR::LoadReferenceHistos()
 
 /// Load reference Histograms (run-by-run in one period) from file into memory
 /// This method should be called at the beginning of processing only once
 //_____________________________________________________________________
-void AliAnalysisTaskEMCALTimeCalib::LoadReferenceRunByRunHistos()
+void AliAnalysisTaskEMCALTimeCalibPAR::LoadReferenceRunByRunHistos()
 {
   // connect ref run here
   if(fReferenceRunByRunFileName.Length()!=0){
@@ -261,12 +261,12 @@ void AliAnalysisTaskEMCALTimeCalib::LoadReferenceRunByRunHistos()
     AliFatal("You require to load reference run-by-run histos from file but FILENAME is not provided");
     return;
   }
-} // End of AliAnalysisTaskEMCALTimeCalib::LoadReferenceRunByRunHistos()
+} // End of AliAnalysisTaskEMCALTimeCalibPAR::LoadReferenceRunByRunHistos()
 
 /// Load reference histogram with L1 phases for given run
 /// This method should be called per run
 ////_____________________________________________________________________
-void AliAnalysisTaskEMCALTimeCalib::SetL1PhaseReferenceForGivenRun()
+void AliAnalysisTaskEMCALTimeCalibPAR::SetL1PhaseReferenceForGivenRun()
 {
   fhRefRuns=NULL;
   if(!fL1PhaseList) {
@@ -296,9 +296,9 @@ void AliAnalysisTaskEMCALTimeCalib::SetL1PhaseReferenceForGivenRun()
 //_____________________________________________________________________
 /// Connect ESD or AOD here
 /// Called when run is changed
-void AliAnalysisTaskEMCALTimeCalib::NotifyRun()
+void AliAnalysisTaskEMCALTimeCalibPAR::NotifyRun()
 {
-  AliDebug(1,"AnalysisTaskEMCalTimeCalib::NotifyRun()");
+  AliDebug(1,"AnalysisTaskEMCalTimeCalibPAR::NotifyRun()");
   AliDebug(2,Form("Notify(): EMCal geometry: fgeom = %p, fGeometryName=%s\n ",fgeom,fGeometryName.Data()));
 
   if (!InputEvent())
@@ -322,15 +322,17 @@ void AliAnalysisTaskEMCALTimeCalib::NotifyRun()
 
   // set bad channel map
   if(!fBadChannelMapSet && fSetBadChannelMapSource>0) LoadBadChannelMap();
-
+  
+  GetPARInfoForRunNumber(fRunNumber);
+  
   return;
 }
 
 //_____________________________________________________________________
 /// Set the EMCal Geometry
-Bool_t AliAnalysisTaskEMCALTimeCalib::SetEMCalGeometry()
+Bool_t AliAnalysisTaskEMCALTimeCalibPAR::SetEMCalGeometry()
 {
-  AliDebug(1,"AliAnalysisTaskEMCALTimeCalib::SetEMCalGeometry()");
+  AliDebug(1,"AliAnalysisTaskEMCALTimeCalibPAR::SetEMCalGeometry()");
   if(fGeometryName.Length()==0){
     fgeom=AliEMCALGeometry::GetInstanceFromRunNumber(fRunNumber);
     AliInfo(Form("Get EMCAL geometry name <%s> for run %d",fgeom->GetName(),fRunNumber));
@@ -350,7 +352,7 @@ Bool_t AliAnalysisTaskEMCALTimeCalib::SetEMCalGeometry()
 
 //_____________________________________________________________________
 /// Get T0 time from TOF
-void AliAnalysisTaskEMCALTimeCalib::PrepareTOFT0maker()
+void AliAnalysisTaskEMCALTimeCalibPAR::PrepareTOFT0maker()
 {
   //method under development
   AliInfo(Form("<D> -- Run # = %d", fRunNumber));
@@ -382,9 +384,9 @@ void AliAnalysisTaskEMCALTimeCalib::PrepareTOFT0maker()
 //________________________________________________________________________
 /// Create histograms
 /// Called once
-void AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()
+void AliAnalysisTaskEMCALTimeCalibPAR::UserCreateOutputObjects()
 {
-  AliDebug(1,"AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()");
+  AliDebug(1,"AliAnalysisTaskEMCALTimeCalibPAR::UserCreateOutputObjects()");
 
   const Int_t nChannels = 17664;
   //book histograms
@@ -426,6 +428,29 @@ void AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()
     fhEneVsAbsIdHG = new TH2F("fhEneVsAbsIdHG", "energy vs ID for HG",1000,0,18000,200,0,10);
     fhEneVsAbsIdLG = new TH2F("fhEneVsAbsIdLG", "energy vs ID for LG",1000,0,18000,200,0,40);
   }
+
+  //Set-up Info for 
+  AliAnalysisManager *mgr = AliAnalysisManager::GetAnalysisManager();
+  if(!mgr) AliFatal("No Analysis Manager I guess... :(\n");
+  Int_t runNum = mgr->GetRunFromPath();
+  fprintf(stdout, "run number from manager: %d\n", runNum);
+  GetPARInfoForRunNumber(runNum);
+
+  for (Int_t iPAR = 0; iPAR <= fCurrentPARs.numPARs; iPAR++){
+    std::array<TH2F*, kNBCmask> fRawTimeSinglePAR;
+    std::array<TH2F*, kNBCmask> fRawTimeLGSinglePAR;
+    for(Int_t iBC = 0; iBC < kNBCmask; iBC++){
+      fRawTimeSinglePAR[iBC] = new TH2F(Form("RawTimeBeforePAR%dBC%d",iPAR+1, iBC),
+				    Form("cell raw time vs ID for high gain BC %d ", iBC),
+				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax);
+      fRawTimeLGSinglePAR[iBC] = new TH2F(Form("RawTimeLGBeforePAR%dBC%d",iPAR+1, iBC),
+				    Form("cell raw time vs ID for low gain BC %d ", iBC),
+				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax);
+    }
+    fhRawTimePARs.push_back(fRawTimeSinglePAR);
+    fhRawTimeLGPARs.push_back(fRawTimeLGSinglePAR);
+    printf("PAR vector up to %d elements!\n", fhRawTimePARs.size());
+  } 
 
   for (Int_t i = 0; i < kNBCmask ;  i++)
   {
@@ -477,25 +502,6 @@ void AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()
       fhRawTimeVsIdBC[i]->SetXTitle("AbsId");
       fhRawTimeVsIdBC[i]->SetYTitle("Time");
     }
-
-    //additional setup for PAR histos;
-    //
-
-    fhRawTimeBeforePAR1[i] = new TH2F(Form("RawTimeBeforePAR1BC%d", i),
-				    Form("cell raw time vs ID for high gain BC %d ", i),
-				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax); 
-    fhRawTimeAfterPAR1[i] = new TH2F(Form("RawTimeAfterPAR1BC%d", i),
-				    Form("cell raw time vs ID for high gain BC %d ", i),
-				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax); 
-    fhRawTimeAfterPAR2[i] = new TH2F(Form("RawTimeAfterPAR2BC%d", i),
-				    Form("cell raw time vs ID for high gain BC %d ", i),
-				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax); 
-    fhRawTimeAfterPAR3[i] = new TH2F(Form("RawTimeAfterPAR3BC%d", i),
-				    Form("cell raw time vs ID for high gain BC %d ", i),
-				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax); 
-    fhRawTimeAfterPAR4[i] = new TH2F(Form("RawTimeAfterPAR4BC%d", i),
-				    Form("cell raw time vs ID for high gain BC %d ", i),
-				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax); 
 
     fhRawTimeSumBC[i] = new TH1F(Form("RawTimeSumBC%d", i),
 				 Form("sum of cell raw time for high gain BC %d ", i),
@@ -616,7 +622,16 @@ void AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()
     fOutputList->Add(fhEneVsAbsIdHG);
     fOutputList->Add(fhEneVsAbsIdLG);
   }
-  fOutputList->Add(fhTcellvsSM);
+  fOutputList->Add(fhTcellvsSM);  
+
+  if(fIsPARRun){
+    for (Int_t iPAR = 0; iPAR <= fCurrentPARs.numPARs; iPAR++){
+      for(Int_t iBC = 0; iBC < kNBCmask; iBC++){
+        fOutputList->Add(fhRawTimePARs[iPAR][iBC]);
+        fOutputList->Add(fhRawTimeLGPARs[iPAR][iBC]);
+      }
+    }
+  }
 
   for (Int_t i = 0; i < kNBCmask ;  i++) 
   {
@@ -632,7 +647,6 @@ void AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()
       fOutputList->Add(fhRawTimeVsIdBC[i]);
       fOutputList->Add(fhRawTimeVsIdLGBC[i]);
     }
-
     fOutputList->Add(fhRawTimeSumBC[i]);
     fOutputList->Add(fhRawTimeEntriesBC[i]);
     fOutputList->Add(fhRawTimeSumSqBC[i]);
@@ -668,11 +682,11 @@ void AliAnalysisTaskEMCALTimeCalib::UserCreateOutputObjects()
   PostData(1,fOutputList);
 
   
-} // End of AliAnalysisTaskEMCALTimeCalib::UserCreateOuputObjects()
+} // End of AliAnalysisTaskEMCALTimeCalibPAR::UserCreateOuputObjects()
 
 //________________________________________________________________________
 /// Main loop executed for each event
-void AliAnalysisTaskEMCALTimeCalib::UserExec(Option_t *)
+void AliAnalysisTaskEMCALTimeCalibPAR::UserExec(Option_t *)
 {
   // Called for each event
   AliDebug(2,Form("UserExec: EMCal geometry: fgeom = %p fGeometryName %s",fgeom,fGeometryName.Data()));
@@ -890,39 +904,37 @@ void AliAnalysisTaskEMCALTimeCalib::UserExec(Option_t *)
 
       //main histograms with raw time information 
       if(amp>fMinCellEnergy){
-	if(isHighGain){
-	  if(fFillHeavyHisto){
-          fhRawTimeVsIdBC[nBC]->Fill(absId,hkdtime);
+          int parIndex = 0;
           if(fIsPARRun){
               ULong64_t eventBC = (ULong64_t)event->GetBunchCrossNumber();
               ULong64_t eventOrbit = ((ULong64_t)(3564))*((ULong64_t)event->GetOrbitNumber());
               ULong64_t eventPeriod = ((ULong64_t)(59793994260))*((ULong64_t)(event->GetPeriodNumber()));
               //ULong64_t globalBC = event->GetBunchCrossNumber() + 3564*event->GetOrbitNumber() + 59793994260*event->GetPeriodNumber();
               ULong64_t globalBC = eventBC + eventOrbit + eventPeriod;
-              int parIndex = 0;
+              parIndex = 0;
               for(int ipar = 0; ipar < fCurrentPARs.numPARs; ipar++){
                   if(globalBC >= fCurrentPARs.PARGlobalBCs[ipar]){
                       parIndex ++;
                   }
               }
-              if(parIndex == 0){
-                  fhRawTimeBeforePAR1[nBC]->Fill(absId, hkdtime);
-              }else if(parIndex == 1){
-                  fhRawTimeAfterPAR1[nBC]->Fill(absId, hkdtime);
-              }else if(parIndex == 2){
-                  fhRawTimeAfterPAR2[nBC]->Fill(absId, hkdtime);
-              }else if(parIndex == 3){
-                  fhRawTimeAfterPAR3[nBC]->Fill(absId, hkdtime);
-              }else if(parIndex == 4){
-                  fhRawTimeAfterPAR4[nBC]->Fill(absId, hkdtime);
-              }
+          }
+	if(isHighGain){
+	  if(fFillHeavyHisto){
+          fhRawTimeVsIdBC[nBC]->Fill(absId,hkdtime);
+          if(fIsPARRun){
+            fhRawTimePARs[parIndex][nBC]->Fill(absId, hkdtime);
           }
       }
 	  fhRawTimeSumBC[nBC]->Fill(absId,hkdtime);
 	  fhRawTimeEntriesBC[nBC]->Fill(absId,1.);
 	  fhRawTimeSumSqBC[nBC]->Fill(absId,hkdtime*hkdtime);
 	}else{
-	  if(fFillHeavyHisto) fhRawTimeVsIdLGBC[nBC]->Fill(absId,hkdtime);
+	  if(fFillHeavyHisto){
+          fhRawTimeVsIdLGBC[nBC]->Fill(absId,hkdtime);
+          if(fIsPARRun){
+            fhRawTimeLGPARs[parIndex][nBC]->Fill(absId, hkdtime);
+          }
+      }
 	  fhRawTimeSumLGBC[nBC]->Fill(absId,hkdtime);
 	  fhRawTimeEntriesLGBC[nBC]->Fill(absId,1.);
 	  fhRawTimeSumSqLGBC[nBC]->Fill(absId,hkdtime*hkdtime);
@@ -1063,12 +1075,12 @@ void AliAnalysisTaskEMCALTimeCalib::UserExec(Option_t *)
 // } // end if trigger type 
 
   PostData(1, fOutputList);  
-} // End of AliAnalysisTaskEMCALTimeCalib::UserExec()
+} // End of AliAnalysisTaskEMCALTimeCalibPAR::UserExec()
 
 //________________________________________________________________________
 /// Draw result to the screen
 /// Called once at the end of the query
-void AliAnalysisTaskEMCALTimeCalib::Terminate(Option_t *)
+void AliAnalysisTaskEMCALTimeCalibPAR::Terminate(Option_t *)
 {
   fOutputList = dynamic_cast<TList*> (GetOutputData(1));
   
@@ -1090,11 +1102,11 @@ void AliAnalysisTaskEMCALTimeCalib::Terminate(Option_t *)
     AliDebug(1,"ERROR: Output list not available");
     return;
   }
-} // End of AliAnalysisTaskEMCALTimeCalib::Terminate
+} // End of AliAnalysisTaskEMCALTimeCalibPAR::Terminate
 
 //________________________________________________________________________
 /// Selection criteria of good cluster are set here
-Bool_t AliAnalysisTaskEMCALTimeCalib::AcceptCluster(AliVCluster* clus)
+Bool_t AliAnalysisTaskEMCALTimeCalibPAR::AcceptCluster(AliVCluster* clus)
 {
   //fix with noisy EMCAL fee card
   Int_t nCells = clus->GetNCells();
@@ -1149,11 +1161,11 @@ Bool_t AliAnalysisTaskEMCALTimeCalib::AcceptCluster(AliVCluster* clus)
 
 
   return kTRUE;
-}//End AliAnalysisTaskEMCALTimeCalib::AcceptCluster
+}//End AliAnalysisTaskEMCALTimeCalibPAR::AcceptCluster
 
 //________________________________________________________________________
 /// Check if low gain cell is in a cluster
-Bool_t  AliAnalysisTaskEMCALTimeCalib::IsLowGainCellInCluster(AliVCluster* clus){
+Bool_t  AliAnalysisTaskEMCALTimeCalibPAR::IsLowGainCellInCluster(AliVCluster* clus){
   UShort_t * index = clus->GetCellsAbsId() ;
   AliVCaloCells &cells= *(InputEvent()->GetEMCALCells());
   for(Int_t i = 0; i < clus->GetNCells() ; i++) {
@@ -1165,7 +1177,7 @@ Bool_t  AliAnalysisTaskEMCALTimeCalib::IsLowGainCellInCluster(AliVCluster* clus)
 
 //________________________________________________________________________
 /// Check RCU for cell given by Super Module, column index, row index
-Bool_t AliAnalysisTaskEMCALTimeCalib::CheckCellRCU(Int_t nSupMod,Int_t icol,Int_t irow)
+Bool_t AliAnalysisTaskEMCALTimeCalibPAR::CheckCellRCU(Int_t nSupMod,Int_t icol,Int_t irow)
 {
   Int_t iRCU;
   if(nSupMod < 10 || (nSupMod >= 12 && nSupMod <18) ) 
@@ -1191,11 +1203,11 @@ Bool_t AliAnalysisTaskEMCALTimeCalib::CheckCellRCU(Int_t nSupMod,Int_t icol,Int_
     AliFatal(Form("Wrong EMCAL/DCAL RCU number = %d\n", iRCU));
 
   return kTRUE;
-}//End AliAnalysisTaskEMCALTimeCalib::CheckCellRCU
+}//End AliAnalysisTaskEMCALTimeCalibPAR::CheckCellRCU
 
 //________________________________________________________________________
 /// Set default cuts for calibration
-void AliAnalysisTaskEMCALTimeCalib::SetDefaultCuts()
+void AliAnalysisTaskEMCALTimeCalibPAR::SetDefaultCuts()
 {
   fMinClusterEnergy=1.0;//0.5//0.7
   fMaxClusterEnergy=500;
@@ -1244,7 +1256,7 @@ void AliAnalysisTaskEMCALTimeCalib::SetDefaultCuts()
 /// input - root file with histograms 
 /// output - root file with constants in historams
 /// isFinal - flag: kFALSE-first iteration, kTRUE-final iteration
-void AliAnalysisTaskEMCALTimeCalib::ProduceCalibConsts(TString inputFile,TString outputFile,Bool_t isFinal)
+void AliAnalysisTaskEMCALTimeCalibPAR::ProduceCalibConsts(TString inputFile,TString outputFile,Bool_t isFinal,Bool_t isPAR)
 {
   TFile *file =new TFile(inputFile.Data());
   if(file==0x0) {
@@ -1258,6 +1270,18 @@ void AliAnalysisTaskEMCALTimeCalib::ProduceCalibConsts(TString inputFile,TString
     //AliWarning("List chistolist does not exist in file!");
     return;
   }
+
+  Int_t numPARs = 0;
+  Int_t counter = 0;
+  if(isPAR){
+    for(const auto&& obj: *list){
+      TString name(obj->GetName());
+      if(name.Contains("RawTimeBeforePAR")) counter++;
+    }
+  }
+  numPARs = Int_t(counter/4) - 1;
+
+  if(numPARs == 0) isPAR = kFALSE;
 
   //high gain
   TH1F *h1[4];
@@ -1273,6 +1297,22 @@ void AliAnalysisTaskEMCALTimeCalib::ProduceCalibConsts(TString inputFile,TString
   TH1F *hAllTimeAvLGBC[4];
   TH1F *hAllTimeRMSLGBC[4];
 
+  //PAR histos
+  TH1F *h1PAR[numPARs+1][4];
+  TH1F *h2PAR[numPARs+1][4];
+  //TH1F *h3PAR[numPARs+1][4];
+  TH1F *hAllTimeAvBCPAR[numPARs+1][4];
+  TH1F *hAllTimeRMSBCPAR[numPARs+1][4];
+
+  TH1F *h4PAR[numPARs+1][4];
+  TH1F *h5PAR[numPARs+1][4];
+  //TH1F *h6PAR[numPARs+1][4];
+  TH1F *hAllTimeAvLGBCPAR[numPARs+1][4];
+  TH1F *hAllTimeRMSLGBCPAR[numPARs+1][4];
+
+  TH2D* raw2D[4];
+  TH2D* rawLG2D[4];
+
   if(isFinal==kFALSE){//first itereation
     for(Int_t i=0;i<4;i++){
       h1[i]=(TH1F *)list->FindObject(Form("RawTimeSumBC%d",i));
@@ -1282,6 +1322,42 @@ void AliAnalysisTaskEMCALTimeCalib::ProduceCalibConsts(TString inputFile,TString
       h4[i]=(TH1F *)list->FindObject(Form("RawTimeSumLGBC%d",i));
       h5[i]=(TH1F *)list->FindObject(Form("RawTimeEntriesLGBC%d",i));
       h6[i]=(TH1F *)list->FindObject(Form("RawTimeSumSqLGBC%d",i));
+      
+      if(isPAR){ //set-up histograms for different PAR time regions
+        for(Int_t iPAR = 0; iPAR <= numPARs+1; iPAR++){
+          raw2D[i] = (TH2D*)list->FindObject(Form("RawTimeBeforePAR%dBC%d", iPAR+1, i));
+          rawLG2D[i] = (TH2D*)list->FindObject(Form("RawTimeLGBeforePAR%dBC%d", iPAR+1, i));
+          h1PAR[iPAR][i] = new TH1F(Form("hAllTimeSumBC%d", i), Form("hAlltimeSumBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          hAllTimeAvBCPAR[iPAR][i] = new TH1F(Form("hAllTimeAvBC%d", i), Form("hAlltimeAvBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          h2PAR[iPAR][i] = (TH1F*)raw2D[i]->ProjectionX(Form("hAllTimeEntriesBC%d", i), 0, raw2D[i]->GetYaxis()->GetNbins());
+
+          h4PAR[iPAR][i] = new TH1F(Form("hAllTimeSumLGBC%d", i), Form("hAllTimeSumLGBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          hAllTimeAvLGBCPAR[iPAR][i] = new TH1F(Form("hAllTimeAvLGBC%d", i), Form("hAlltimeAvLGBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          h5PAR[iPAR][i] = (TH1F*)raw2D[i]->ProjectionX(Form("hAllTimeEntriesLGBC%d", i), 0, raw2D[i]->GetYaxis()->GetNbins());
+          for(int ixbin = 0; ixbin < raw2D[i]->GetXaxis()->GetNbins(); ixbin++){
+              float sumtime = 0.0;
+              float sumLGtime = 0.0;
+              for(int iybin = 0; iybin < raw2D[i]->GetYaxis()->GetNbins(); iybin++){
+                  sumtime += raw2D[i]->GetBinContent(ixbin, iybin)*raw2D[i]->GetYaxis()->GetBinCenter(iybin);
+                  sumLGtime += rawLG2D[i]->GetBinContent(ixbin, iybin)*rawLG2D[i]->GetYaxis()->GetBinCenter(iybin);
+              }
+              h1PAR[iPAR][i]->SetBinContent(ixbin, sumtime);
+              h4PAR[iPAR][i]->SetBinContent(ixbin, sumLGtime);
+              if(h2PAR[iPAR][i]->GetBinContent(ixbin) ==0){
+                  hAllTimeAvBCPAR[iPAR][i]->SetBinContent(ixbin, 0);
+              }else{
+                  hAllTimeAvBCPAR[iPAR][i]->SetBinContent(ixbin, h1PAR[iPAR][i]->GetBinContent(ixbin)/h2PAR[iPAR][i]->GetBinContent(ixbin));
+              }
+
+              if(h4PAR[iPAR][i]->GetBinContent(ixbin) ==0){
+                  hAllTimeAvLGBCPAR[iPAR][i]->SetBinContent(ixbin, 0);
+              }else{
+                  hAllTimeAvLGBCPAR[iPAR][i]->SetBinContent(ixbin, h4PAR[iPAR][i]->GetBinContent(ixbin)/h5PAR[iPAR][i]->GetBinContent(ixbin));
+              }
+          }
+
+        }
+      }
     }
   } else {//final iteration
     for(Int_t i=0;i<4;i++){
@@ -1332,10 +1408,19 @@ void AliAnalysisTaskEMCALTimeCalib::ProduceCalibConsts(TString inputFile,TString
   //AliWarning("Average and rms calculated.");
   TFile *fileNew=new TFile(outputFile.Data(),"recreate");
   for(Int_t i=0;i<4;i++){
-    hAllTimeAvBC[i]->Write();
-    hAllTimeRMSBC[i]->Write();
-    hAllTimeAvLGBC[i]->Write();
-    hAllTimeRMSLGBC[i]->Write();
+    if(isPAR){
+      for(Int_t iPAR = 0; iPAR <= numPARs; iPAR++){
+          hAllTimeAvBCPAR[iPAR][i]->Write();
+          //hAllTimeRMSBCPAR[iPAR][i]->Write();
+          hAllTimeAvLGBCPAR[iPAR][i]->Write();
+          //hAllTimeRMSLGBCPAR[iPAR][i]->Write();
+      }
+    }else{
+      hAllTimeAvBC[i]->Write();
+      hAllTimeRMSBC[i]->Write();
+      hAllTimeAvLGBC[i]->Write();
+      hAllTimeRMSLGBC[i]->Write();
+    }
   }
 
   //AliWarning(Form("Histograms saved in %s file.",outputFile.Data()));
@@ -1367,7 +1452,7 @@ void AliAnalysisTaskEMCALTimeCalib::ProduceCalibConsts(TString inputFile,TString
 /// Calculate calibration constants per SM (equivalent of L1 phase)
 /// input - root file with calibration constants from 1st pass
 /// output - root file with histograms for given run offset per SM 
-void AliAnalysisTaskEMCALTimeCalib::ProduceOffsetForSMsV2(Int_t runNumber,TString inputFile,TString outputFile, Bool_t offset100, Bool_t justL1phase){
+void AliAnalysisTaskEMCALTimeCalibPAR::ProduceOffsetForSMsV2(Int_t runNumber,TString inputFile,TString outputFile, Bool_t offset100, Bool_t justL1phase, TString PARFilename){
 
 const  Double_t lowerLimit[]={
     0,
@@ -1413,24 +1498,85 @@ const  Double_t upperLimit[]={
     17279,
     17663};
 
+  PARInfo info;
+  info.numPARs = 0;
+  Bool_t isPAR = kFALSE;
+  if(PARFilename.Data() != ""){
+      std::ifstream input;
+      int inputrunnumber = 0, numPARs = 0;
+      ULong64_t PAR = 0;
+      input.open(PARFilename.Data());
+      if(!input.good()){
+          printf("PAR info file not accessable: %s\n", PARFilename.Data());
+          return;
+      }
+      while(input.good()){
+          input >> inputrunnumber >> numPARs;
+          if(!input.good()) break;
+          info.runNumber = inputrunnumber;
+          info.numPARs = numPARs;
+          //printf("\n\n!!!!\n\n from file: runnumber = %d, numPars = %d\n\n", info.runNumber, info.numPARs);
+          if(numPARs <= 0 || numPARs > 10){
+              printf("Number of PARS incorrectly found to be %d!\n", numPARs);
+              return;
+          }
+          for(int iPAR = 0; iPAR < numPARs; iPAR++){
+              input >> PAR;
+              if(info.runNumber == runNumber){
+                info.PARGlobalBCs.push_back(PAR);
+              }
+          }
+          if(info.runNumber == runNumber) break;
+      }
+      input.close();
+
+      if(info.runNumber != runNumber){
+          isPAR = kFALSE;
+      }else{
+        isPAR = kTRUE;
+        printf("info.runNumber = %d\n", info.runNumber);
+        printf("info.numPARs = %d\n", info.numPARs);
+        for(int i = 0; i < info.numPARs; i++){
+        printf("info.PARGlobalBCs[%d] = %u\n", i, info.PARGlobalBCs[i]);
+        }
+      }
+  }
+
   TFile *file =new TFile(inputFile.Data());
-  if(file==0x0) return;
+  if(file==0x0) return; 
 
   TH1F *ccBC[4];
   Bool_t shouldBeEmpty[4];
+  TH1F *ccBCPAR[info.numPARs+1][4];
   Int_t emptyCounter;
+
   for(Int_t i = 0; i < kNBCmask; i++){
-    ccBC[i]=(TH1F*) file->Get(Form("hAllTimeAvBC%d",i));
-    shouldBeEmpty[i]=kFALSE;
-    emptyCounter=0;
-    for(Int_t j=0;j<upperLimit[19];j++){
-      if(ccBC[i]->GetBinContent(j)>0.) emptyCounter++;
+    if(isPAR){
+      for(Int_t iPAR = 0; iPAR <= info.numPARs; iPAR++){
+        ccBCPAR[iPAR][i] = (TH1F*)file->Get(Form("hAllTimeAvBC%dPAR%d", i, iPAR));
+        shouldBeEmpty[i]=kFALSE;
+        emptyCounter=0;
+        for(Int_t j=0;j<upperLimit[19];j++){
+          if(ccBCPAR[iPAR][i]->GetBinContent(j)>0.) emptyCounter++;
+        }
+        if(emptyCounter<1500) shouldBeEmpty[i]=kTRUE;
+        printf("Non-zero channels %d BC %d should be empty: %d \n",emptyCounter,i,shouldBeEmpty[i]);
+
+      }
+    }else{
+      ccBC[i]=(TH1F*) file->Get(Form("hAllTimeAvBC%d",i));
+      shouldBeEmpty[i]=kFALSE;
+      emptyCounter=0;
+      for(Int_t j=0;j<upperLimit[19];j++){
+        if(ccBC[i]->GetBinContent(j)>0.) emptyCounter++;
+      }
+      if(emptyCounter<1500) shouldBeEmpty[i]=kTRUE;
+      printf("Non-zero channels %d BC %d should be empty: %d \n",emptyCounter,i,shouldBeEmpty[i]);
     }
-    if(emptyCounter<1500) shouldBeEmpty[i]=kTRUE;
-    printf("Non-zero channels %d BC %d should be empty: %d \n",emptyCounter,i,shouldBeEmpty[i]);
   }
 
   TH1C *hRun=new TH1C(Form("h%d",runNumber),Form("h%d",runNumber),19,0,19);
+  TH1C *hPARRun[info.numPARs+1];
   Int_t fitResult=0;
   Double_t minimumValue=10000.;
   Int_t minimumIndex=-1;
@@ -1444,18 +1590,28 @@ const  Double_t upperLimit[]={
   Int_t L1shift=0;
   Int_t totalValue=0;
 
-  for(Int_t i=0;i<20;i++){
-    minimumValue=10000;
-    for(j=0;j<kNBCmask;j++){
-      if(shouldBeEmpty[j]) {
-	meanBC[j]=-1;
-	continue;
-      }
-      fitResult=ccBC[j]->Fit("f1","CQ","",lowerLimit[i],upperLimit[i]);
-      if(fitResult<0){
+  for(Int_t iPAR = 0; iPAR <= info.numPARs; iPAR++){
+    hPARRun[iPAR] =new TH1C(Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]), Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]),19,0,19);
+    for(Int_t i=0;i<20;i++){
+      minimumValue=10000;
+      for(j=0;j<kNBCmask;j++){
+        if(shouldBeEmpty[j]) {
+	  meanBC[j]=-1;
+	  continue;
+        }
+        if(isPAR){
+          fitResult=ccBCPAR[iPAR][j]->Fit("f1", "CQ", "", lowerLimit[i],upperLimit[i]);
+        }else{
+          fitResult=ccBC[j]->Fit("f1","CQ","",lowerLimit[i],upperLimit[i]);
+        }
+        if(fitResult<0){
 	//hRun->SetBinContent(i,0);//correct it please
 	meanBC[j]=-1;
-	printf("Fit failed for SM %d BC%d, integral %f\n",i,j,ccBC[j]->Integral(lowerLimit[i],upperLimit[i]));
+	if(isPAR){
+      printf("Fit failed for SM %d BC%d, integral %f\n",i,j,ccBCPAR[iPAR][j]->Integral(lowerLimit[i],upperLimit[i]));
+    }else{
+      printf("Fit failed for SM %d BC%d, integral %f\n",i,j,ccBC[j]->Integral(lowerLimit[i],upperLimit[i]));
+    }
 	continue;
       } else {
 	fitParameter = f1->GetParameter(0);
@@ -1485,7 +1641,11 @@ const  Double_t upperLimit[]={
     else totalValue = L1shift<<2 | minimumIndex ;
     //printf("L1 phase %d, L1 shift %d *25ns= %d, L1p+L1s %d, total %d, L1pback %d, L1sback %d\n",minimumIndex,L1shift,L1shift*25,minimumIndex+L1shift,totalValue,totalValue&3,totalValue>>2);
 
-    hRun->SetBinContent(i,totalValue);
+    if(isPAR){
+      hPARRun[iPAR]->SetBinContent(i,totalValue);
+    }else{
+      hRun->SetBinContent(i,totalValue);
+    }
     orderTest=kTRUE;
     for(iorder=minimumIndex;iorder<minimumIndex+4-1;iorder++){
       if( meanBC[(iorder+1)%4] <= meanBC[iorder%4] ) orderTest=kFALSE;
@@ -1497,24 +1657,44 @@ const  Double_t upperLimit[]={
     //manual patch for LHC16q - pPb@5TeV - only BC0 is filled and phase rotate
     if(shouldBeEmpty[0] || shouldBeEmpty[1] || shouldBeEmpty[2] || shouldBeEmpty[3]){
     Double_t newMean = meanBC[minimumIndex]-600;
-    if(newMean<=12.5) hRun->SetBinContent(i,minimumIndex);
-    else {
+    if(newMean<=12.5){
+      if(isPAR){
+        hPARRun[iPAR]->SetBinContent(i,minimumIndex);
+      }else{
+        hRun->SetBinContent(i,minimumIndex);
+      }
+    } else {
       Int_t minIndexTmp=-1;
       if(newMean/25. - (Int_t)(newMean/25.) <0.5)
 	minIndexTmp = (Int_t)(newMean/25.);
       else
 	minIndexTmp = 1+(Int_t)(newMean/25.);
 
-      hRun->SetBinContent(i,(4-minIndexTmp+minimumIndex)%4);
+      if(isPAR){
+        hPARRun[iPAR]->SetBinContent(i,(4-minIndexTmp+minimumIndex)%4);
+      }else{
+        hRun->SetBinContent(i,(4-minIndexTmp+minimumIndex)%4);
+      }
       //cout<<newMean/25.<<" int "<<(Int_t)(newMean/25.)<<" dif "<< newMean/25.-(Int_t)(newMean/25.)<<endl;
       }
-    printf("run with missing BC; new L1 phase set to %d\n",(Int_t)hRun->GetBinContent(i));
-    }//end of patch for LHC16q and other runs with not filled BCs
-  }//end of loop over SM
+    if(isPAR){
+      printf("run with missing BC; new L1 phase set to %d\n",(Int_t)hPARRun[iPAR]->GetBinContent(i));
+    }else{
+      printf("run with missing BC; new L1 phase set to %d\n",(Int_t)hRun->GetBinContent(i));
+    }
+      }//end of patch for LHC16q and other runs with not filled BCs
+    }//end of loop over SM
+  }//end of loop over PARs
 
   delete f1;
   TFile *fileNew=new TFile(outputFile.Data(),"update");
-  hRun->Write();
+  if(isPAR){
+    for(Int_t iPAR = 0; iPAR <= info.numPARs; iPAR++){
+      hPARRun[iPAR]->Write();
+    }
+  }else{
+    hRun->Write();
+  }
   fileNew->Close();
   delete fileNew;
 
@@ -1523,7 +1703,7 @@ const  Double_t upperLimit[]={
 }
 
 //____________________________________________________
-void AliAnalysisTaskEMCALTimeCalib::LoadBadChannelMapOADB()
+void AliAnalysisTaskEMCALTimeCalibPAR::LoadBadChannelMapOADB()
 {
   if(fBadChannelMapSet) return;
   AliOADBContainer *contBC=new AliOADBContainer("");
@@ -1550,7 +1730,7 @@ void AliAnalysisTaskEMCALTimeCalib::LoadBadChannelMapOADB()
 }  // Bad channel map loaded
 
 //____________________________________________________
-void AliAnalysisTaskEMCALTimeCalib::LoadBadChannelMapFile()
+void AliAnalysisTaskEMCALTimeCalibPAR::LoadBadChannelMapFile()
 {
   if(fBadChannelMapSet) return;
 
@@ -1571,10 +1751,13 @@ void AliAnalysisTaskEMCALTimeCalib::LoadBadChannelMapFile()
 
 //_____________________________________________________________________
 /// Load Bad Channel Map from different source
-void AliAnalysisTaskEMCALTimeCalib::LoadBadChannelMap(){
+void AliAnalysisTaskEMCALTimeCalibPAR::LoadBadChannelMap(){
   if(fSetBadChannelMapSource==1) LoadBadChannelMapOADB();
   else if(fSetBadChannelMapSource==2) LoadBadChannelMapFile();
 }
+
+//_____________________________________________________________________
+// Load PAR info from text file
 void AliAnalysisTaskEMCALTimeCalibPAR::SetPARInfo(TString PARFileName){
     std::ifstream input;
     int runnumber = 0, numPARs = 0;
@@ -1600,4 +1783,25 @@ void AliAnalysisTaskEMCALTimeCalibPAR::SetPARInfo(TString PARFileName){
         fPARvec.push_back(info);
     }
     input.close();
+}
+
+//_______________________________________________________________________
+// Get Par info for the current run number, set-up PAR info variables
+void AliAnalysisTaskEMCALTimeCalibPAR::GetPARInfoForRunNumber(Int_t runnum){
+
+  if(fRunNumber!=runnum) fRunNumber = runnum;
+  fIsPARRun = kFALSE;
+  fCurrentPARs.PARGlobalBCs.erase(fCurrentPARs.PARGlobalBCs.begin(), fCurrentPARs.PARGlobalBCs.end());
+  for(int iPARrun = 0; iPARrun < fPARvec.size(); iPARrun++){
+      //printf("\n\n!! !! !!\n\nchecking the text file!\n");
+      if (fRunNumber==fPARvec[iPARrun].runNumber){
+          //set PAR flag & setup copy of specific PAR info
+          fIsPARRun = kTRUE;
+          fCurrentPARs.runNumber = fRunNumber;
+          fCurrentPARs.numPARs = fPARvec[iPARrun].numPARs;
+          for(int ipar = 0; ipar < fPARvec[iPARrun].numPARs; ipar++){
+              fCurrentPARs.PARGlobalBCs.push_back(fPARvec[iPARrun].PARGlobalBCs[ipar]);
+          }
+      }
+  }
 }
