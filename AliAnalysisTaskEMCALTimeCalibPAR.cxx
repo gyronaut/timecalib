@@ -1830,9 +1830,9 @@ void AliAnalysisTaskEMCALTimeCalibPAR::LoadBadChannelMap(){
 // Load PAR info from text file
 void AliAnalysisTaskEMCALTimeCalibPAR::SetPARInfo(TString PARFileName){
     std::ifstream input;
-    int runnumber = 0, numPARs = 0;
+    int runnumber = 0, numPARs = 0, numRuns=0;
     ULong64_t PAR = 0;
-    if(!gSystem->ExpandPathName(PARFileName)) AliFatal(Form("Could not expand path name %s", PARFileName.Data()));
+    gSystem->ExpandPathName(PARFileName);
     //handle case of PAR file in Alien location, needs to be copied to working directory before ifstream can open.
     if(PARFileName.Contains("alien://")){
         TString localFileName(gSystem->BaseName(PARFileName.Data()));
@@ -1849,7 +1849,7 @@ void AliAnalysisTaskEMCALTimeCalibPAR::SetPARInfo(TString PARFileName){
         PARInfo info;
         info.runNumber = runnumber;
         info.numPARs = numPARs;
-        printf("\n\n!!!!\n\n from file: runnumber = %d, numPars = %d\n\n", info.runNumber, info.numPARs);
+        //printf("\n\n!!!!\n\n from file: runnumber = %d, numPars = %d\n\n", info.runNumber, info.numPARs);
         if(numPARs <= 0 || numPARs > 10){
             AliFatal(Form("Number of PARS incorrectly found to be %d!", numPARs));
         }
@@ -1858,7 +1858,9 @@ void AliAnalysisTaskEMCALTimeCalibPAR::SetPARInfo(TString PARFileName){
             info.PARGlobalBCs.push_back(PAR);
         }
         fPARvec.push_back(info);
+        numRuns++;
     }
+    printf("number of runs processed in PAR file: %d\n", numRuns);
     input.close();
 }
 
