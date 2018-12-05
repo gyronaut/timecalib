@@ -1,3 +1,3 @@
 void SetupMacro(){
-    gROOT->LoadMacro("./AliAnalysisTaskEMCALTimeCalibPAR.cxx++g");
+    gROOT->LoadMacro("/Users/jtblair/repos/timecalib/AliAnalysisTaskEMCALTimeCalibPAR.cxx++g");
 }

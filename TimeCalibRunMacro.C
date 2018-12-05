@@ -16,14 +16,14 @@ void TimeCalibRunMacro()
    const char* launch = "grid"; // grid, local (if your data is on your local machine, doesn't connect at all)
    const char*  mode = "full"; //test, full, terminate  (test= connect to grid but run locally, full= run on grid, terminate= merge output on grid)
    Bool_t pre_final_stage = kTRUE; //TRUE = merging done on grid, FALSE = merge happens locally   
-   Int_t cyclenumber = 1;
+   Int_t cyclenumber = 2;
    Bool_t debug = kTRUE;
    char* work_dir = "TimeCalibWork";
-   char* output_dir = "LHC18f_PARtest_step3_noRbyR_20181204";
+   char* output_dir = "LHC18f_PARtest_step1_20181205";
    Int_t ttl = 50000;
    Int_t noffiles = 40;
    //Int_t runcycle[]={0,20,35,50,65,80,95,110,125,140,158};
-   Int_t runcycle[] ={0,6,13};
+   Int_t runcycle[] ={0,7,13};
    Bool_t UseParfiles = kFALSE;
 
 // create and customize the alien handler
@@ -70,7 +70,8 @@ void TimeCalibRunMacro()
   //Int_t runArray[] = {286427, 286594, 286877};
 
   //LHC18f PAR test
-  Int_t runArray[] = {287072, 287201, 287203, 287208, 287325, 287349, 287518, 287524, 287578, 287658, 287613, 287783, 287784};
+  //Int_t runArray[] = {287072, 287201, 287203, 287208, 287325, 287349, 287518, 287524, 287578, 287658, 287613, 287783, 287784};
+  Int_t runArray[] = {287021, 287063, 287064, 287072, 287201, 287387, 287656};
 
    for (Int_t i =  runcycle[cyclenumber - 1]; i < runcycle[cyclenumber] ; i++)
    {
@@ -93,8 +94,8 @@ void TimeCalibRunMacro()
    alienHandler->SetSplitMode("se");
    alienHandler->SetMasterResubmitThreshold(10);
    alienHandler->SetMergeExcludes("EventStat_temp.root");
-   alienHandler->SetOutputToRunNo(kFALSE); //change run-by-run processing??
-   alienHandler->SetNrunsPerMaster(3); //change run-by-run processing??
+   alienHandler->SetOutputToRunNo(kTRUE); //change run-by-run processing??
+   //alienHandler->SetNrunsPerMaster(3); //change run-by-run processing??
    alienHandler->SetKeepLogs(kTRUE);
    alienHandler->SetMaxMergeFiles(20);
 //   alienHandler->SetMaxMergeStages(5);
@@ -147,13 +148,13 @@ gSystem->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/EMCA
     //AliAnalysisTaskEMCALTimeCalibPAR *task = reinterpret_cast<AliAnalysisTaskEMCALTimeCalibPAR*>(gInterpreter->ProcessLine(Form(".x %s(\"AnalysisResults.root\",\"\",0.01,500,2,200,0.01,100.,0.01,100.,0.025,0.01,-20., 20., kFALSE, \"\", \"\",kFALSE, kFALSE, 1, \"\", \"alien::///alice/cern.ch/user/j/jblair/TimeCalibRef/LHC18c_PARs.txt\")", gSystem->ExpandPathName("AddTaskEMCALTimeCalibrationPAR.C"))));
 
     //step1
-    //AliAnalysisTaskEMCALTimeCalibPAR *task = reinterpret_cast<AliAnalysisTaskEMCALTimeCalibPAR*>(gInterpreter->ProcessLine(Form(".x %s(\"AnalysisResults.root\",\"\",0.01,500,2,200,0.01,100.,0.01,100.,0.025,0.01,-20., 20., kFALSE, \"\", \"\",kFALSE, kTRUE, 1, \"\", \"LHC18f_PARs.txt\")", gSystem->ExpandPathName("AddTaskEMCALTimeCalibrationPAR.C"))));
+    AliAnalysisTaskEMCALTimeCalibPAR *task = reinterpret_cast<AliAnalysisTaskEMCALTimeCalibPAR*>(gInterpreter->ProcessLine(Form(".x %s(\"AnalysisResults.root\",\"\",0.01,500,2,200,0.01,100.,0.01,100.,0.025,0.01,300., 900., kFALSE, \"\", \"\",kFALSE, kTRUE, 1, \"\", kFALSE, \"alien:///alice/cern.ch/user/j/jblair/TimeCalibRef/GlobID_2018_processed.txt\")", gSystem->ExpandPathName("AddTaskEMCALTimeCalibrationPAR.C"))));
 
     //step2
     //AliAnalysisTaskEMCALTimeCalibPAR *task = reinterpret_cast<AliAnalysisTaskEMCALTimeCalibPAR*>(gInterpreter->ProcessLine(Form(".x %s(\"AnalysisResults.root\",\"\",0.01,500,2,200,0.01,100.,0.01,100.,0.025,0.01,300., 900., kFALSE, \"\", \"alien:///alice/cern.ch/user/j/jblair/TimeCalibRef/LHC18f_pass1_test.root\",kFALSE, kFALSE, 1, \"\", kFALSE, \"LHC18f_PARs.txt\")", gSystem->ExpandPathName("AddTaskEMCALTimeCalibrationPAR.C"))));
 
     //step3
-    AliAnalysisTaskEMCALTimeCalibPAR *task = reinterpret_cast<AliAnalysisTaskEMCALTimeCalibPAR*>(gInterpreter->ProcessLine(Form(".x %s(\"AnalysisResults.root\",\"\",0.01,500,2,200,0.01,100.,0.01,100.,0.025,0.01,-20., 20., kFALSE, \"alien:///alice/cern.ch/user/j/jblair/TimeCalibRef/Reference_LHC18f_step2_partest.root\", \"alien:///alice/cern.ch/user/j/jblair/TimeCalibRef/LHC18f_pass1_test.root\",kFALSE, kFALSE, 1, \"\", kFALSE, \"LHC18f_PARs.txt\")", gSystem->ExpandPathName("AddTaskEMCALTimeCalibrationPAR.C"))));
+    //AliAnalysisTaskEMCALTimeCalibPAR *task = reinterpret_cast<AliAnalysisTaskEMCALTimeCalibPAR*>(gInterpreter->ProcessLine(Form(".x %s(\"AnalysisResults.root\",\"\",0.01,500,2,200,0.01,100.,0.01,100.,0.025,0.01,-20., 20., kFALSE, \"alien:///alice/cern.ch/user/j/jblair/TimeCalibRef/Reference_LHC18f_step2_partest.root\", \"alien:///alice/cern.ch/user/j/jblair/TimeCalibRef/LHC18f_pass1_test.root\",kFALSE, kFALSE, 1, \"\", kFALSE, \"LHC18f_PARs.txt\")", gSystem->ExpandPathName("AddTaskEMCALTimeCalibrationPAR.C"))));
    if (!mgr->InitAnalysis())
      return;
 
