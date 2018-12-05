@@ -294,6 +294,51 @@ void AliAnalysisTaskEMCALTimeCalibPAR::SetL1PhaseReferenceForGivenRun()
 }
 
 //_____________________________________________________________________
+//  Function for Setting L1 Phase reference in case of multiple phases for PAR
+
+void AliAnalysisTaskEMCALTimeCalibPAR::SetL1PhaseReferencePAR(){
+  if(fCurrentPARs.runNumber == 0){
+    AliFatal("fCurrentPARs not properly set! Unable to get PAR information.");
+    return;
+  }
+
+  //if Reference is set, check if it is for correct PAR region
+  if(fhRefRuns!=0x0){
+    TString refName(fhRefRuns->GetName());
+    TString correctName;
+    if(fCurrentPARIndex < fCurrentPARs.numPARs){
+        correctName = Form("h%d_%llu", fRunNumber, fCurrentPARs.PARGlobalBCs[fCurrentPARIndex]);
+    }else{
+        correctName = Form("h%d", fRunNumber);
+    }
+    if(refName.CompareTo(correctName)==0) return;
+  }
+
+  fhRefRuns=NULL;
+  if(!fL1PhaseList) {
+    AliFatal("Array with reference L1 phase histograms do not exist in memory");
+    return;
+  }
+  if(fRunNumber<0) {
+    AliFatal("Negative run number");
+    return;
+  }
+    if(fCurrentPARIndex < fCurrentPARs.numPARs){
+    fhRefRuns=(TH1C*)fL1PhaseList->FindObject(Form("h%d_%llu", fRunNumber, fCurrentPARs.PARGlobalBCs[fCurrentPARIndex]));
+  }else{
+    fhRefRuns=(TH1C*)fL1PhaseList->FindObject(Form("h%d", fRunNumber));
+  }
+
+  if(fhRefRuns==0x0){
+      AliFatal(Form("No Reference R-b-R histo found for run %d PAR %d!", fRunNumber, fCurrentPARIndex));
+      return;
+    }
+  if(fhRefRuns->GetEntries()==0)AliWarning("fhRefRuns->GetEntries() = 0");
+  AliDebug(1,Form("hRefRuns entries %d", (Int_t)fhRefRuns->GetEntries() ));
+
+}
+
+//_____________________________________________________________________
 /// Connect ESD or AOD here
 /// Called when run is changed
 void AliAnalysisTaskEMCALTimeCalibPAR::NotifyRun()
@@ -316,15 +361,20 @@ void AliAnalysisTaskEMCALTimeCalibPAR::NotifyRun()
   if (!fgeom) SetEMCalGeometry();
   //Init EMCAL geometry done
 
+  GetPARInfoForRunNumber(fRunNumber);
+
+  if(fIsPARRun){
+    if(fReferenceRunByRunFileName.Length()!=0){
+      SetL1PhaseReferencePAR();
+    }
+  }
   //set L1 phases for current run
   if(fReferenceRunByRunFileName.Length()!=0)
     SetL1PhaseReferenceForGivenRun();
 
   // set bad channel map
   if(!fBadChannelMapSet && fSetBadChannelMapSource>0) LoadBadChannelMap();
-  
-  GetPARInfoForRunNumber(fRunNumber);
-  
+
   return;
 }
 
@@ -429,28 +479,32 @@ void AliAnalysisTaskEMCALTimeCalibPAR::UserCreateOutputObjects()
     fhEneVsAbsIdLG = new TH2F("fhEneVsAbsIdLG", "energy vs ID for LG",1000,0,18000,200,0,40);
   }
 
-  //Set-up Info for 
+  //Set-up Info for PAR histograms 
   AliAnalysisManager *mgr = AliAnalysisManager::GetAnalysisManager();
-  if(!mgr) AliFatal("No Analysis Manager I guess... :(\n");
+  if(!mgr) AliFatal("No Analysis Manager available...\n");
   Int_t runNum = mgr->GetRunFromPath();
-  fprintf(stdout, "run number from manager: %d\n", runNum);
   GetPARInfoForRunNumber(runNum);
 
-  for (Int_t iPAR = 0; iPAR <= fCurrentPARs.numPARs; iPAR++){
-    std::array<TH2F*, kNBCmask> fRawTimeSinglePAR;
-    std::array<TH2F*, kNBCmask> fRawTimeLGSinglePAR;
-    for(Int_t iBC = 0; iBC < kNBCmask; iBC++){
-      fRawTimeSinglePAR[iBC] = new TH2F(Form("RawTimeBeforePAR%dBC%d",iPAR+1, iBC),
-				    Form("cell raw time vs ID for high gain BC %d ", iBC),
+  if(fIsPARRun){
+    for (Int_t iPAR = 0; iPAR <= fCurrentPARs.numPARs; iPAR++){
+      TH2F* fRawTimeSinglePAR;
+      TH2F* fRawTimeLGSinglePAR;
+      std::vector<TH2F*> vecRawTimePAR;
+      std::vector<TH2F*> vecRawTimeLGPAR;
+      for(Int_t iBC = 0; iBC < kNBCmask; iBC++){
+        fRawTimeSinglePAR = new TH2F(Form("RawTimeBeforePAR%dBC%d",iPAR+1, iBC),
+		  		    Form("cell raw time vs ID for high gain BC %d ", iBC),
 				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax);
-      fRawTimeLGSinglePAR[iBC] = new TH2F(Form("RawTimeLGBeforePAR%dBC%d",iPAR+1, iBC),
+        fRawTimeLGSinglePAR = new TH2F(Form("RawTimeLGBeforePAR%dBC%d",iPAR+1, iBC),
 				    Form("cell raw time vs ID for low gain BC %d ", iBC),
 				    nChannels,0.,(Double_t)nChannels,fRawTimeNbins,fRawTimeMin,fRawTimeMax);
+        vecRawTimePAR.push_back(fRawTimeSinglePAR);
+        vecRawTimeLGPAR.push_back(fRawTimeLGSinglePAR);  
+      }
+      fhRawTimePARs.push_back(vecRawTimePAR);
+      fhRawTimeLGPARs.push_back(vecRawTimeLGPAR);
     }
-    fhRawTimePARs.push_back(fRawTimeSinglePAR);
-    fhRawTimeLGPARs.push_back(fRawTimeLGSinglePAR);
-    printf("PAR vector up to %d elements!\n", fhRawTimePARs.size());
-  } 
+  }
 
   for (Int_t i = 0; i < kNBCmask ;  i++)
   {
@@ -624,7 +678,7 @@ void AliAnalysisTaskEMCALTimeCalibPAR::UserCreateOutputObjects()
   }
   fOutputList->Add(fhTcellvsSM);  
 
-  if(fIsPARRun){
+  if(fIsPARRun && fFillHeavyHisto){
     for (Int_t iPAR = 0; iPAR <= fCurrentPARs.numPARs; iPAR++){
       for(Int_t iBC = 0; iBC < kNBCmask; iBC++){
         fOutputList->Add(fhRawTimePARs[iPAR][iBC]);
@@ -857,6 +911,22 @@ void AliAnalysisTaskEMCALTimeCalibPAR::UserExec(Option_t *)
   Int_t mostEneId=-1;
   Float_t mostEneEn=0.;
   
+  fCurrentPARIndex = 0;
+  if(fIsPARRun){
+      ULong64_t eventBC = (ULong64_t)event->GetBunchCrossNumber();
+      ULong64_t eventOrbit = ((ULong64_t)(3564))*((ULong64_t)event->GetOrbitNumber());
+      ULong64_t eventPeriod = ((ULong64_t)(59793994260))*((ULong64_t)(event->GetPeriodNumber()));
+      //ULong64_t globalBC = event->GetBunchCrossNumber() + 3564*event->GetOrbitNumber() + 59793994260*event->GetPeriodNumber();
+      ULong64_t globalBC = eventBC + eventOrbit + eventPeriod;
+      for(int ipar = 0; ipar < fCurrentPARs.numPARs; ipar++){
+          if(globalBC >= fCurrentPARs.PARGlobalBCs[ipar]){
+              fCurrentPARIndex ++;
+          }
+      }
+  }
+  if(fReferenceRunByRunFileName.Length()!=0){
+    SetL1PhaseReferencePAR();
+  }
   for (Int_t icl = 0; icl < nclus; icl++) {
     //ESD and AOD CaloCells carries the same information
     AliVCluster* clus = (AliVCluster*)caloClusters->At(icl);
@@ -904,25 +974,12 @@ void AliAnalysisTaskEMCALTimeCalibPAR::UserExec(Option_t *)
 
       //main histograms with raw time information 
       if(amp>fMinCellEnergy){
-          int parIndex = 0;
-          if(fIsPARRun){
-              ULong64_t eventBC = (ULong64_t)event->GetBunchCrossNumber();
-              ULong64_t eventOrbit = ((ULong64_t)(3564))*((ULong64_t)event->GetOrbitNumber());
-              ULong64_t eventPeriod = ((ULong64_t)(59793994260))*((ULong64_t)(event->GetPeriodNumber()));
-              //ULong64_t globalBC = event->GetBunchCrossNumber() + 3564*event->GetOrbitNumber() + 59793994260*event->GetPeriodNumber();
-              ULong64_t globalBC = eventBC + eventOrbit + eventPeriod;
-              parIndex = 0;
-              for(int ipar = 0; ipar < fCurrentPARs.numPARs; ipar++){
-                  if(globalBC >= fCurrentPARs.PARGlobalBCs[ipar]){
-                      parIndex ++;
-                  }
-              }
-          }
+          
 	if(isHighGain){
 	  if(fFillHeavyHisto){
           fhRawTimeVsIdBC[nBC]->Fill(absId,hkdtime);
           if(fIsPARRun){
-            fhRawTimePARs[parIndex][nBC]->Fill(absId, hkdtime);
+            fhRawTimePARs[fCurrentPARIndex][nBC]->Fill(absId, hkdtime);
           }
       }
 	  fhRawTimeSumBC[nBC]->Fill(absId,hkdtime);
@@ -932,7 +989,7 @@ void AliAnalysisTaskEMCALTimeCalibPAR::UserExec(Option_t *)
 	  if(fFillHeavyHisto){
           fhRawTimeVsIdLGBC[nBC]->Fill(absId,hkdtime);
           if(fIsPARRun){
-            fhRawTimeLGPARs[parIndex][nBC]->Fill(absId, hkdtime);
+            fhRawTimeLGPARs[fCurrentPARIndex][nBC]->Fill(absId, hkdtime);
           }
       }
 	  fhRawTimeSumLGBC[nBC]->Fill(absId,hkdtime);
@@ -1276,10 +1333,11 @@ void AliAnalysisTaskEMCALTimeCalibPAR::ProduceCalibConsts(TString inputFile,TStr
   if(isPAR){
     for(const auto&& obj: *list){
       TString name(obj->GetName());
-      if(name.Contains("RawTimeBeforePAR")) counter++;
+      if(name.BeginsWith("RawTimeBeforePAR")) counter++;
     }
   }
   numPARs = Int_t(counter/4) - 1;
+  printf("number of PARs found to be %d!\n", numPARs);
 
   if(numPARs == 0) isPAR = kFALSE;
 
@@ -1324,16 +1382,16 @@ void AliAnalysisTaskEMCALTimeCalibPAR::ProduceCalibConsts(TString inputFile,TStr
       h6[i]=(TH1F *)list->FindObject(Form("RawTimeSumSqLGBC%d",i));
       
       if(isPAR){ //set-up histograms for different PAR time regions
-        for(Int_t iPAR = 0; iPAR <= numPARs+1; iPAR++){
+        for(Int_t iPAR = 0; iPAR <= numPARs; iPAR++){
           raw2D[i] = (TH2D*)list->FindObject(Form("RawTimeBeforePAR%dBC%d", iPAR+1, i));
           rawLG2D[i] = (TH2D*)list->FindObject(Form("RawTimeLGBeforePAR%dBC%d", iPAR+1, i));
-          h1PAR[iPAR][i] = new TH1F(Form("hAllTimeSumBC%d", i), Form("hAlltimeSumBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
-          hAllTimeAvBCPAR[iPAR][i] = new TH1F(Form("hAllTimeAvBC%d", i), Form("hAlltimeAvBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
-          h2PAR[iPAR][i] = (TH1F*)raw2D[i]->ProjectionX(Form("hAllTimeEntriesBC%d", i), 0, raw2D[i]->GetYaxis()->GetNbins());
+          h1PAR[iPAR][i] = new TH1F(Form("hAllTimeSumPAR%dBC%d",iPAR, i), Form("hAlltimeSumPAR%dBC%d",iPAR, i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          hAllTimeAvBCPAR[iPAR][i] = new TH1F(Form("hAllTimeAvPAR%dBC%d",iPAR, i), Form("hAlltimeAvPAR%dBC%d",iPAR, i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          h2PAR[iPAR][i] = (TH1F*)raw2D[i]->ProjectionX(Form("hAllTimeEntriesPAR%dBC%d",iPAR, i), 0, raw2D[i]->GetYaxis()->GetNbins());
 
-          h4PAR[iPAR][i] = new TH1F(Form("hAllTimeSumLGBC%d", i), Form("hAllTimeSumLGBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
-          hAllTimeAvLGBCPAR[iPAR][i] = new TH1F(Form("hAllTimeAvLGBC%d", i), Form("hAlltimeAvLGBC%d", i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
-          h5PAR[iPAR][i] = (TH1F*)raw2D[i]->ProjectionX(Form("hAllTimeEntriesLGBC%d", i), 0, raw2D[i]->GetYaxis()->GetNbins());
+          h4PAR[iPAR][i] = new TH1F(Form("hAllTimeSumLGPAR%dBC%d",iPAR, i), Form("hAllTimeSumLGPAR%dBC%d",iPAR, i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          hAllTimeAvLGBCPAR[iPAR][i] = new TH1F(Form("hAllTimeAvLGPAR%dBC%d",iPAR, i), Form("hAlltimeAvLGPAR%dBC%d",iPAR, i), raw2D[i]->GetXaxis()->GetNbins(), raw2D[i]->GetXaxis()->GetXmin(), raw2D[i]->GetXaxis()->GetXmax());
+          h5PAR[iPAR][i] = (TH1F*)raw2D[i]->ProjectionX(Form("hAllTimeEntriesPAR%dLGBC%d",iPAR, i), 0, raw2D[i]->GetYaxis()->GetNbins());
           for(int ixbin = 0; ixbin < raw2D[i]->GetXaxis()->GetNbins(); ixbin++){
               float sumtime = 0.0;
               float sumLGtime = 0.0;
@@ -1349,7 +1407,7 @@ void AliAnalysisTaskEMCALTimeCalibPAR::ProduceCalibConsts(TString inputFile,TStr
                   hAllTimeAvBCPAR[iPAR][i]->SetBinContent(ixbin, h1PAR[iPAR][i]->GetBinContent(ixbin)/h2PAR[iPAR][i]->GetBinContent(ixbin));
               }
 
-              if(h4PAR[iPAR][i]->GetBinContent(ixbin) ==0){
+              if(h5PAR[iPAR][i]->GetBinContent(ixbin) ==0){
                   hAllTimeAvLGBCPAR[iPAR][i]->SetBinContent(ixbin, 0);
               }else{
                   hAllTimeAvLGBCPAR[iPAR][i]->SetBinContent(ixbin, h4PAR[iPAR][i]->GetBinContent(ixbin)/h5PAR[iPAR][i]->GetBinContent(ixbin));
@@ -1501,7 +1559,7 @@ const  Double_t upperLimit[]={
   PARInfo info;
   info.numPARs = 0;
   Bool_t isPAR = kFALSE;
-  if(PARFilename.Data() != ""){
+  if(PARFilename.Length() != 0){
       std::ifstream input;
       int inputrunnumber = 0, numPARs = 0;
       ULong64_t PAR = 0;
@@ -1537,7 +1595,7 @@ const  Double_t upperLimit[]={
         printf("info.runNumber = %d\n", info.runNumber);
         printf("info.numPARs = %d\n", info.numPARs);
         for(int i = 0; i < info.numPARs; i++){
-        printf("info.PARGlobalBCs[%d] = %u\n", i, info.PARGlobalBCs[i]);
+        printf("info.PARGlobalBCs[%d] = %llu\n", i, info.PARGlobalBCs[i]);
         }
       }
   }
@@ -1549,18 +1607,19 @@ const  Double_t upperLimit[]={
   Bool_t shouldBeEmpty[4];
   TH1F *ccBCPAR[info.numPARs+1][4];
   Int_t emptyCounter;
+  Bool_t shouldBeEmptyPAR[info.numPARs+1][4];
 
   for(Int_t i = 0; i < kNBCmask; i++){
     if(isPAR){
       for(Int_t iPAR = 0; iPAR <= info.numPARs; iPAR++){
-        ccBCPAR[iPAR][i] = (TH1F*)file->Get(Form("hAllTimeAvBC%dPAR%d", i, iPAR));
-        shouldBeEmpty[i]=kFALSE;
+        ccBCPAR[iPAR][i] = (TH1F*)file->Get(Form("hAllTimeAvPAR%dBC%d", iPAR, i));
+        shouldBeEmptyPAR[iPAR][i]=kFALSE;
         emptyCounter=0;
         for(Int_t j=0;j<upperLimit[19];j++){
           if(ccBCPAR[iPAR][i]->GetBinContent(j)>0.) emptyCounter++;
         }
-        if(emptyCounter<1500) shouldBeEmpty[i]=kTRUE;
-        printf("Non-zero channels %d BC %d should be empty: %d \n",emptyCounter,i,shouldBeEmpty[i]);
+        if(emptyCounter<1500) shouldBeEmptyPAR[iPAR][i]=kTRUE;
+        printf("Non-zero channels %d BC %d should be empty: %d \n",emptyCounter,i,shouldBeEmptyPAR[iPAR][i]);
 
       }
     }else{
@@ -1591,13 +1650,24 @@ const  Double_t upperLimit[]={
   Int_t totalValue=0;
 
   for(Int_t iPAR = 0; iPAR <= info.numPARs; iPAR++){
-    hPARRun[iPAR] =new TH1C(Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]), Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]),19,0,19);
+    if(iPAR != info.numPARs){
+      hPARRun[iPAR] =new TH1C(Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]), Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]),19,0,19);
+    }else{
+      hPARRun[iPAR] =new TH1C(Form("h%d", runNumber), Form("h%d", runNumber),19,0,19);
+    }
     for(Int_t i=0;i<20;i++){
       minimumValue=10000;
       for(j=0;j<kNBCmask;j++){
-        if(shouldBeEmpty[j]) {
-	  meanBC[j]=-1;
-	  continue;
+        if(isPAR){
+          if(shouldBeEmptyPAR[iPAR][j]){
+            meanBC[j]=-1;
+            continue;
+          }
+        }else{
+          if(shouldBeEmpty[j]) {
+	        meanBC[j]=-1;
+	        continue;
+          }
         }
         if(isPAR){
           fitResult=ccBCPAR[iPAR][j]->Fit("f1", "CQ", "", lowerLimit[i],upperLimit[i]);
@@ -1762,6 +1832,13 @@ void AliAnalysisTaskEMCALTimeCalibPAR::SetPARInfo(TString PARFileName){
     std::ifstream input;
     int runnumber = 0, numPARs = 0;
     ULong64_t PAR = 0;
+    if(!gSystem->ExpandPathName(PARFileName)) AliFatal(Form("Could not expand path name %s", PARFileName.Data()));
+    //handle case of PAR file in Alien location, needs to be copied to working directory before ifstream can open.
+    if(PARFileName.Contains("alien://")){
+        TString localFileName(gSystem->BaseName(PARFileName.Data()));
+        TFile::Cp(PARFileName.Data(), localFileName.Data());
+        PARFileName = localFileName;
+    }
     input.open(PARFileName.Data());
     if(!input.good()){
         AliFatal(Form("PAR info file not accessable: %s", PARFileName.Data()));
