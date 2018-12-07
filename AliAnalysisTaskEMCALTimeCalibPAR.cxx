@@ -363,14 +363,14 @@ void AliAnalysisTaskEMCALTimeCalibPAR::NotifyRun()
 
   GetPARInfoForRunNumber(fRunNumber);
 
-  if(fIsPARRun){
-    if(fReferenceRunByRunFileName.Length()!=0){
+  //set L1 phases for current run
+  if(fReferenceRunByRunFileName.Length()!=0){
+    if(fIsPARRun){
       SetL1PhaseReferencePAR();
+    }else{
+      SetL1PhaseReferenceForGivenRun();
     }
   }
-  //set L1 phases for current run
-  if(fReferenceRunByRunFileName.Length()!=0)
-    SetL1PhaseReferenceForGivenRun();
 
   // set bad channel map
   if(!fBadChannelMapSet && fSetBadChannelMapSource>0) LoadBadChannelMap();
@@ -924,7 +924,7 @@ void AliAnalysisTaskEMCALTimeCalibPAR::UserExec(Option_t *)
           }
       }
   }
-  if(fReferenceRunByRunFileName.Length()!=0){
+  if(fReferenceRunByRunFileName.Length()!=0 && fIsPARRun){
     SetL1PhaseReferencePAR();
   }
   for (Int_t icl = 0; icl < nclus; icl++) {
@@ -1339,7 +1339,7 @@ void AliAnalysisTaskEMCALTimeCalibPAR::ProduceCalibConsts(TString inputFile,TStr
   numPARs = Int_t(counter/4) - 1;
   printf("number of PARs found to be %d!\n", numPARs);
 
-  if(numPARs == 0) isPAR = kFALSE;
+  if(numPARs == -1) isPAR = kFALSE;
 
   //high gain
   TH1F *h1[4];
@@ -1590,6 +1590,7 @@ const  Double_t upperLimit[]={
 
       if(info.runNumber != runNumber){
           isPAR = kFALSE;
+          info.numPARs = 0;
       }else{
         isPAR = kTRUE;
         printf("info.runNumber = %d\n", info.runNumber);
@@ -1626,6 +1627,7 @@ const  Double_t upperLimit[]={
       ccBC[i]=(TH1F*) file->Get(Form("hAllTimeAvBC%d",i));
       shouldBeEmpty[i]=kFALSE;
       emptyCounter=0;
+      printf("Got to the BC loop\n");
       for(Int_t j=0;j<upperLimit[19];j++){
         if(ccBC[i]->GetBinContent(j)>0.) emptyCounter++;
       }
@@ -1633,6 +1635,8 @@ const  Double_t upperLimit[]={
       printf("Non-zero channels %d BC %d should be empty: %d \n",emptyCounter,i,shouldBeEmpty[i]);
     }
   }
+
+  printf("Finished BC looop\n");
 
   TH1C *hRun=new TH1C(Form("h%d",runNumber),Form("h%d",runNumber),19,0,19);
   TH1C *hPARRun[info.numPARs+1];
@@ -1650,6 +1654,7 @@ const  Double_t upperLimit[]={
   Int_t totalValue=0;
 
   for(Int_t iPAR = 0; iPAR <= info.numPARs; iPAR++){
+    printf("Inside the PAR loop\n");
     if(iPAR != info.numPARs){
       hPARRun[iPAR] =new TH1C(Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]), Form("h%d_%llu", runNumber, info.PARGlobalBCs[iPAR]),19,0,19);
     }else{
@@ -1657,6 +1662,7 @@ const  Double_t upperLimit[]={
     }
     for(Int_t i=0;i<20;i++){
       minimumValue=10000;
+      printf("Made it to the SM loop!\n");
       for(j=0;j<kNBCmask;j++){
         if(isPAR){
           if(shouldBeEmptyPAR[iPAR][j]){
