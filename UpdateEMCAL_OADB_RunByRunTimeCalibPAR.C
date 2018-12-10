@@ -25,6 +25,8 @@ void UpdateEMCAL_OADB_RunByRunTimeCalibPAR(const char *fileNameOADBAli="$ALICE_D
     // LHC17j - 20180320
 //      updateFile(fileNameOADB,"TimeCalibL1LHC17j","LHC17j/LHC17j_mcp1_L1phases.root","LHC17j/runlist_17j.txt","pass1");
 
+    // LHC18f - 20181208 testing!
+    updateFile(fileNameOADB, "TimeCalibL1LHC18f", "LHC18f_pass1_mixtest.root", "LHC18f_test_runlist.txt", "pass1");
 
     // the final output will be sorted by runnumber
     sortOutput("EMCALTimeL1PhaseCalib_temp.root");
@@ -55,6 +57,7 @@ void updateFile(const char *fileNameOADB,TString arrName, TString filename, TStr
   Int_t nSM = 20;
 
   Bool_t firstTime=kFALSE;
+  Bool_t isNewPass=kFALSE;
 
   //open file with corrections and check
   TFile *referenceFile = TFile::Open(filename.Data());//<<---change it here
@@ -78,8 +81,15 @@ void updateFile(const char *fileNameOADB,TString arrName, TString filename, TStr
 
       if(runNumber>200000){//L1 phase is only in LHC15 periods
 
-    tmpRefRun = (TH1C*)referenceFile->Get(Form("h%d",runNumber));
-    if(tmpRefRun==0x0) continue;
+    //tmpRefRun = (TH1C*)referenceFile->Get(Form("h%d",runNumber));
+    TIter next(referenceFile->GetList());
+    TObject *obj;
+    while((obj = next())){
+        TString objname(obj->GetName());
+        if(objname.BeginsWith(Form("h%d", runNumber))){
+          tempRefRun = (TH1C*)obj;
+        }
+        if(tmpRefRun==0x0) continue;
 
     //get run (period) array
     TObjArray *arrayPeriod=NULL;
@@ -91,9 +101,14 @@ void updateFile(const char *fileNameOADB,TString arrName, TString filename, TStr
     }
     //cout<<"arrayPeriod (not null)"<<arrayPeriod<<endl;
 
-    //create pass array
-    TObjArray *arrayPass=new TObjArray(1);
-    arrayPass->SetName(passname.Data());
+    //create pass array if it doesn't already exist
+    TObjArray *arrayPass=NULL;
+    arrayPass=(TObjArray*)arrayPeriod->FindObject(passname.Data());
+    if(arrayPass==0x0){
+        TObjArray *arrayPass=new TObjArray(1);
+        arrayPass->SetName(passname.Data());
+        isNewPass=kTRUE;
+    }
 
 
     //add histogram to pass array
@@ -101,7 +116,9 @@ void updateFile(const char *fileNameOADB,TString arrName, TString filename, TStr
     arrayPass->Add(tmpRefRun);
     
     //add pass array to period
-    arrayPeriod->Add(arrayPass);
+    if(isNewPass){
+        arrayPeriod->Add(arrayPass);
+    }
 
     //When updating object that has already been created: for instance, adding pass2,3 etc.
     //Just get the object and add new array. Append of runnumber is already done in this case.
@@ -113,7 +130,7 @@ void updateFile(const char *fileNameOADB,TString arrName, TString filename, TStr
       con->AppendObject(arrayPeriod,runNumber,runNumber);
       firstTime=kFALSE;
     }
-    
+    }
     nRuns++;
       }
     }
