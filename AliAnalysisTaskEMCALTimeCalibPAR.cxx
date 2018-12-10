@@ -1331,7 +1331,9 @@ void AliAnalysisTaskEMCALTimeCalibPAR::ProduceCalibConsts(TString inputFile,TStr
   Int_t numPARs = 0;
   Int_t counter = 0;
   if(isPAR){
-    for(const auto&& obj: *list){
+    TIter next(list);
+    TObject* obj;
+    while((obj = next())){
       TString name(obj->GetName());
       if(name.BeginsWith("RawTimeBeforePAR")) counter++;
     }
